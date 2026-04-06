@@ -55,6 +55,13 @@ def prepare_xy(
     y = (df["range_label"] == "invasive").astype(int).values
     return X, y, env_vars
 
+def get_non_native_label(species_name: str) -> str:
+    mapping = {
+        "Pontastacus leptodactylus": "cryptogenic",
+        "Austropotamobius fulcisianus": "introduced",
+        "Austropotamobius pallipes": "introduced",
+    }
+    return mapping.get(species_name, "non-native")
 
 def cross_validate_tree(
     X: np.ndarray,
@@ -213,7 +220,8 @@ def plot_decision_tree(
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
 
-    # Calculate figure size based on tree depth
+    non_native_label = get_non_native_label(species_name)
+
     depth = clf.get_depth()
     n_leaves = clf.get_n_leaves()
     fig_width = max(20, n_leaves * 2.5)
@@ -223,7 +231,7 @@ def plot_decision_tree(
     plot_tree(
         clf,
         feature_names=feature_names,
-        class_names=["native", "invasive"],
+        class_names=["native", non_native_label],
         filled=True,
         rounded=True,
         ax=ax,
@@ -231,8 +239,10 @@ def plot_decision_tree(
         impurity=False,
         proportion=True,
     )
-    ax.set_title(f"{species_name}: Decision Tree (native vs. invasive)",
-                 fontsize=14)
+    ax.set_title(
+        f"{species_name}: Decision Tree (native vs. {non_native_label})",
+        fontsize=14
+    )
 
     safe_name = species_name.replace(" ", "_").lower()
     fig_path = out / f"{safe_name}_decision_tree.png"
@@ -264,8 +274,11 @@ def plot_feature_importances(
     ax.set_yticks(range(len(labels)))
     ax.set_yticklabels(labels)
     ax.set_xlabel("Feature Importance")
-    ax.set_title(f"{species_name}: Top {n_top} Environmental Variables\n"
-                 f"(distinguishing native from invasive range)")
+    non_native_label = get_non_native_label(species_name)
+    ax.set_title(
+        f"{species_name}: Top {n_top} Environmental Variables\n"
+        f"(distinguishing native from {non_native_label} range)"
+    )
     ax.tick_params(axis='y', labelsize=8)
     plt.tight_layout()
 

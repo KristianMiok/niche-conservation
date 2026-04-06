@@ -100,6 +100,13 @@ def sample_background(
 
     return background
 
+def get_non_native_label(species_name: str) -> str:
+    mapping = {
+        "Pontastacus leptodactylus": "Cryptogenic",
+        "Austropotamobius fulcisianus": "Introduced",
+        "Austropotamobius pallipes": "Introduced",
+    }
+    return mapping.get(species_name, "Non-native")
 
 def train_niche_tree(
     presence: pd.DataFrame,
@@ -282,14 +289,14 @@ def plot_threshold_comparison(
     output_dir: str = "results/figures",
 ) -> str:
     """
-    Plot comparing native vs invasive thresholds for shared variables.
+    Plot comparing native vs non-native thresholds for shared variables.
     """
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
 
-    # Only variables present in both models
-    shared = [c for c in comparisons if c["in_both"]]
+    non_native_label = get_non_native_label(species_name)
 
+    shared = [c for c in comparisons if c["in_both"]]
     if not shared:
         print(f"  No shared variables to plot for {species_name}")
         return ""
@@ -301,24 +308,29 @@ def plot_threshold_comparison(
 
     for i, comp in enumerate(shared[:6]):
         ax = axes[i]
-        var = comp["variable"]
         nat_t = comp["native_threshold"]
         inv_t = comp["invasive_threshold"]
 
-        ax.barh(["Native", "Invasive"], [nat_t, inv_t],
-                color=["#2196F3", "#F44336"], height=0.5)
-        ax.set_title(f"{var}\n{comp['description'][:35]}", fontsize=8)
+        ax.barh(
+            ["Native", non_native_label],
+            [nat_t, inv_t],
+            color=["#2196F3", "#F44336"],
+            height=0.5
+        )
+        ax.set_title(f"{comp['variable']}\n{comp['description'][:35]}", fontsize=8)
         ax.tick_params(labelsize=8)
 
-        # Show shift
         if comp["shift_pct"] is not None:
             shift_str = f"Shift: {comp['threshold_shift']:+.1f}"
             if comp["shift_pct"] is not None:
                 shift_str += f" ({comp['shift_pct']:+.0f}%)"
             ax.set_xlabel(shift_str, fontsize=7)
 
-    fig.suptitle(f"{species_name}: Niche Threshold Comparison\n"
-                 f"(native vs. invasive range)", fontsize=12)
+    fig.suptitle(
+        f"{species_name}: Niche Threshold Comparison\n"
+        f"(native vs. {non_native_label.lower()} range)",
+        fontsize=12
+    )
     plt.tight_layout()
 
     safe_name = species_name.replace(" ", "_").lower()
@@ -326,7 +338,6 @@ def plot_threshold_comparison(
     fig.savefig(fig_path, dpi=150, bbox_inches="tight")
     plt.close(fig)
     return str(fig_path)
-
 
 def analyze_species_niche(
     df_filtered: pd.DataFrame,
@@ -492,7 +503,7 @@ def plot_summary_threshold_shifts(
         ax.barh([p - 0.15 for p in y_pos], sp_data["native_threshold"],
                 height=0.3, color="#2196F3", label="Native", alpha=0.8)
         ax.barh([p + 0.15 for p in y_pos], sp_data["invasive_threshold"],
-                height=0.3, color="#F44336", label="Invasive", alpha=0.8)
+                height=0.3, color="#F44336", label="Non-native", alpha=0.8)
 
         ax.set_yticks(list(y_pos))
         ax.set_yticklabels(labels, fontsize=8)
@@ -500,7 +511,7 @@ def plot_summary_threshold_shifts(
         ax.legend(fontsize=8)
         ax.tick_params(labelsize=8)
 
-    fig.suptitle("Niche Threshold Comparison: Native vs. Invasive Range",
+    fig.suptitle("Niche Threshold Comparison: Native vs. Non-native Range",
                  fontsize=13, y=1.01)
     plt.tight_layout()
 

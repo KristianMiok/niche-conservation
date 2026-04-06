@@ -266,11 +266,11 @@ def plot_rf_importance_by_type_stacked(
     ax.legend(loc="upper right")
     ax.set_ylim(0, 105)
 
-    ax.axvline(x=2.5, color="gray", linestyle="--", alpha=0.5)
-    ax.text(1, 102, "Intercontinental invaders",
-            ha="center", fontsize=9, color="gray")
-    ax.text(3.5, 102, "Within-continent",
-            ha="center", fontsize=9, color="gray")
+    # ax.axvline(x=2.5, color="gray", linestyle="--", alpha=0.5)
+    # ax.text(1, 102, "Intercontinental invaders",
+    #         ha="center", fontsize=9, color="gray")
+    # ax.text(3.5, 102, "Within-continent",
+    #         ha="center", fontsize=9, color="gray")
 
     plt.tight_layout()
     fig_path = out / "rf_importance_by_type_stacked.png"
