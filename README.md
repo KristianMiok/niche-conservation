@@ -1,69 +1,124 @@
-# Crayfish Niche Shift Analysis
+# Paper 2 — niche retention in historically translocated crayfish
 
-Comparative analysis of ecological niche thresholds between native and invasive
-ranges of freshwater crayfish, using machine learning decision rules derived from
-the Global Crayfish Database of Geospatial Traits (GeoTraits).
+Code and processed outputs for:
 
-## Project Structure
+> Pârvulescu L., Petko O. N., Miok K. *Historically translocated crayfish populations
+> retain most of their native environmental niche: implications for conservation
+> assessment.* Biodiversity and Conservation (in revision; submission ID
+> 9468c89f-7df4-4107-a27e-78698586f69c).
 
-```
-crayfish-niche-shift/
-├── config/
-│   └── species_config.yaml      # Species selection criteria & parameters
-├── data/
-│   ├── raw/                     # Original GeoTraits exports (not tracked in git)
-│   ├── interim/                 # Intermediate processing outputs
-│   └── processed/               # Final analysis-ready datasets
-├── src/
-│   ├── __init__.py
-│   ├── data_loader.py           # Load and validate raw GeoTraits data
-│   ├── species_selector.py      # Filter species by inclusion criteria
-│   ├── data_preparation.py      # Prepare native/invasive splits, clean, encode
-│   └── eda.py                   # Exploratory data analysis & summary stats
-├── notebooks/
-│   └── 01_data_exploration.py   # Initial data exploration (run as script or notebook)
-├── results/
-│   ├── figures/
-│   ├── tables/
-│   └── models/
-├── requirements.txt
-├── .gitignore
-└── README.md
-```
+Native vs non-native ("Introduced" in the GeoTraits `Status` column) occurrences of
+*Pontastacus leptodactylus*, *Austropotamobius fulcisianus* and *A. pallipes*.
 
-## Setup
+This repository is the published copy of the folder `conservation/` of
+[github.com/KristianMiok/niche-shift](https://github.com/KristianMiok/niche-shift), which
+also holds Paper 1 (Miok et al. 2026, *Journal of Biogeography*, doi:10.1111/jbi.70332).
+It carries its own copy of the pipeline, because Paper 2 changes the species list and
+status labels in `src/species_selector.py`.
+
+## Running
+
+All paths in the scripts are relative to the repository root, and the input files go
+to `data/raw/` (not tracked):
 
 ```bash
-# Clone and set up environment
-git clone <repo-url>
-cd crayfish-niche-shift
-python -m venv venv
-source venv/bin/activate  # or venv\Scripts\activate on Windows
-pip install -r requirements.txt
+python src/random_forest_shap.py --input data/raw/combined_data_true_master.csv
 ```
 
-## Data
+Python 3.12 with the versions pinned in `requirements.txt`; the ecospat step needs R 4.3.3
+with ecospat 4.1.4 and ade4 1.7-24.
 
-Place `combined_data_true_master.csv` in `data/raw/`. This is the Full Integrated
-Dataset from the Global Crayfish Database of Geospatial Traits, containing
-occurrence-level records with ~400 environmental variables.
+Input: `data/raw/combined_data_true_master.csv`, the GeoTraits master table (file of
+18 February 2026; 115,191 records, 419 columns, 264,508,600 bytes, MD5
+0670eba9ae3098cb6c816493d8b13f79), and `data/raw/S2.xlsx` (variable glossary). Neither
+is tracked.
 
-This file is not tracked in git due to size.
+## Scripts and outputs (submitted version)
 
-## Usage
+| Script | Outputs in `results/` | Manuscript |
+|---|---|---|
+| `decision_tree.py` | `tables/*_decision_rules.*`, `*_feature_importances.csv`, `dt_summary.json`; `figures/*_decision_tree.png`, `*_feature_importance.png` | Table 2 (DT), Table 3 (DT), Fig. S1, Fig. S2, Table S1 |
+| `random_forest_shap.py` | `tables/*_rf_gini_importances.csv`, `*_rf_shap_importances.csv`, `rf_shap_summary.json`; `figures/*_shap_summary.png` | Table 2 (RF), Table 3 (RF), Fig. S3 |
+| `cross_species_comparison.py` | `figures/cross_species_*.png`, `rf_importance_by_type_stacked.png` | Fig. 2, Fig. S4 |
+| `niche_overlap_metrics.py`, `niche_overlap_conservation_figure.py` | `tables/niche_overlap_summary.*`; `figures/niche_overlap/*` | Section 3.3, Fig. 3, Fig. S7 |
+| `separate_niche_models.py`, `separate_niche_table_s4.py` | `tables/*_threshold_comparison.csv`, `separate_niche_summary.json`, `table_s4_expanded*` | Section 3.4, Table S4 |
+| `cv_importance_stability.py` | `tables/cv_stability/*`; `figures/cv_stability/*` | Table S2, Fig. S5 |
+| `pseudoabsence_sensitivity.py` | `pseudoabsence_sensitivity/*`; `figures/pseudoabsence_sensitivity/*` | Table S3, Fig. S6 |
+| `spatial_cv_rf.py` | `tables/spatial_cv_rf_*` | Table S5 |
+| `cross_paper_comparison.py` | `figures/cross_paper_*.png` (uses `results/paper1_reference_*.json`) | not in manuscript |
 
-```bash
-# Step 1: Load data and see species/status counts
-python src/data_loader.py --input data/raw/combined_data_true_master.csv
+`null_model_dichotomy.py`, `sample_size_sensitivity.py` and `eda.py` are part of the
+inherited pipeline; their outputs were not regenerated for this paper.
 
-# Step 2: Select candidate species meeting inclusion criteria
-python src/species_selector.py --input data/raw/combined_data_true_master.csv
+The outputs above were regenerated in the pinned environment for the revision. Record
+counts, decision trees and D/I reproduce the first submission exactly. Random-forest
+values in Tables 2 and 3 move by up to about 2 percentage points, and the basin-grouped
+spatial accuracies of Table S5 by up to 3.4 (earlier scikit-learn version). The separate
+niche models reproduce Table S4, but four lower splits of the native *A. pallipes*
+presence-background tree differ. Figures are saved at 300 dpi.
 
-# Step 3: Prepare analysis-ready datasets per species
-python src/data_preparation.py --input data/raw/combined_data_true_master.csv
+## Revision R1 (October 2026)
 
-# Step 4: Run EDA for a specific species
-python src/eda.py --species "Procambarus clarkii" \
-                  --data data/processed/procambarus_clarkii_combined.csv \
-                  --vars data/processed/procambarus_clarkii_env_vars.txt
-```
+New scripts, all prefixed `r1_` and sharing `src/r1_common.py` (settings identical to
+the submitted pipeline). Outputs go to `results/revision/tables/` and
+`results/revision/figures/`.
+
+| Script | Outputs | Revision item |
+|---|---|---|
+| `r1_classification.py` | `r1_classification_{metrics,summary,per_fold}.csv`, `r1_noclimate_top_variables.csv` | KM-2 (balanced accuracy, MCC, class metrics), KM-4 (models without climate, and without climate and the cell-step variables), KM-7 (grid-block spatial CV) |
+| `r1_downsampling.py` | `r1_downsampling_{replicates,summary}.csv` | KM-2 (100 balanced subsamples) |
+| `r1_permutation_importance.py` | `r1_permutation_{grouped,variable}.csv`, `r1_importance_domain_comparison.csv` | KM-3 |
+| `r1_ecospat_prepare.py`, `r1_ecospat.R`, `r1_ecospat_figure.R` | `r1_ecospat_background_summary.csv`, `r1_ecospat_results_<set>.csv`, `r1_ecospat_null_D_<set>_<species>.csv`, `r1_ecospat_versions_<set>.json` (sets: `climate`, `non_climate`, `all`); `figures/Fig3_ecospat_niche_dynamics.png`, `FigS6_ecospat_niche_dynamics_all_variables.png`, `FigS7_ecospat_null_distributions.png` | KM-5, item 19 |
+| `r1_separate_models_audit.py` | `r1_background_geography.csv`, `r1_threshold_stability_*.csv`, `r1_separate_models_geo100*.csv` | KM-6, item 11 (background limits) |
+| `r1_basin_id_audit.py` | `r1_basin_id_audit.csv` | KM-7 (why basin_id was replaced) |
+| `r1_uncertain_records.py` | `r1_uncertain_records.csv` | KM-8 |
+| `r1_status_by_country.py` | `r1_status_by_country.csv` | item 10 |
+| `r1_figures.py` | `figures/Fig2_domain_importance.png`, `FigS2_top20_dt_by_domain.png`, `FigS4_dt_importance_heatmap.png`, `FigS5_type_stability*.png` | items 16-17, Figs. S4-S5 |
+| `r1_tables.py` | `r1_Table2.csv`, `r1_Table3.csv`, `r1_TableS1.csv`, `r1_TableS2.csv`, `r1_TableS5.csv`, `r1_table_feature_sets.csv`, `r1_table_ecospat.csv`, `r1_table_ecospat_sensitivity.csv`, `r1_submitted_vs_regenerated.csv` | Tables 2, 3, S1, S2, S5 and the new tables |
+
+Run order (from the repository root): `r1_classification.py` (then
+`--sets no_climate_no_cellstep`), `r1_permutation_importance.py`, `r1_downsampling.py`,
+`r1_uncertain_records.py`, `r1_separate_models_audit.py`, `r1_basin_id_audit.py`,
+`r1_status_by_country.py`, `r1_ecospat_prepare.py`,
+`ECOSPAT_SET=<set> Rscript src/r1_ecospat.R` for `climate`, `non_climate` and `all`,
+`Rscript src/r1_ecospat_figure.R`, `r1_figures.py`, `r1_tables.py`. The ecospat step
+needs R with ecospat (4.1.4 used, 1000 replicates; 30-45 min per set on one core); its
+record-level inputs in `results/revision/ecospat_input/` are not tracked, in line with
+the World of Crayfish data policy, and are rebuilt by `r1_ecospat_prepare.py`.
+
+Item 18: `decision_tree.py`, `niche_overlap_metrics.py` and `pseudoabsence_sensitivity.py`
+now label the second class "non-native" in figures and rule files (outputs regenerated;
+values unchanged). Internal variable and JSON key names of the inherited pipeline still
+say "invasive". The SHAP summary plots of `random_forest_shap.py` (Fig. S3) label each
+variable with its description and state that positive SHAP values push a record towards
+non-native.
+
+### Files behind each item of the revised manuscript
+
+| Item | File |
+|---|---|
+| Table 2 | `results/revision/tables/r1_Table2.csv` |
+| Table 3 | `results/revision/tables/r1_Table3.csv` |
+| Table 5 (ecospat) | `results/revision/tables/r1_table_ecospat.csv` |
+| Figure 2 | `results/revision/figures/Fig2_domain_importance.png` |
+| Figure 3 | `results/revision/figures/Fig3_ecospat_niche_dynamics.png` |
+| Table S1 | `results/revision/tables/r1_TableS1.csv` (top 20 variables by RF SHAP, plus the other decision-tree variables) |
+| Table S2 | `results/revision/tables/r1_TableS2.csv` |
+| Tables S3-S5 | `r1_table_feature_sets.csv`, `r1_table_ecospat_sensitivity.csv`, `r1_TableS5.csv` in `results/revision/tables/` |
+| Figure S1 | `results/figures/*_decision_tree.png` |
+| Figure S2 | `results/revision/figures/FigS2_top20_dt_by_domain.png` |
+| Figure S3 | `results/figures/*_shap_summary.png` |
+| Figure S4 | `results/revision/figures/FigS4_dt_importance_heatmap.png` |
+| Figure S5 | `results/revision/figures/FigS5_type_stability*.png` |
+| Figure S6 | `results/revision/figures/FigS6_ecospat_niche_dynamics_all_variables.png` |
+| Figure S7 | `results/revision/figures/FigS7_ecospat_null_distributions.png` |
+
+Section 3.4, the former Tables S3-S4 and the former Figure S6 (separate niche models)
+were dropped in the revision; their scripts and outputs stay in the repository.
+
+## Provenance
+
+Copy of `conservation/` in niche-shift at commit d1e8b56 (26 October 2026). The history
+continues the earlier commits of this repository; 4d5a99f (6 April 2026) is the version
+of the first submission. Script docstrings that say "from conservation/" refer to the
+niche-shift layout; here the same commands run from the repository root.

@@ -23,3 +23,8 @@ Thumbs.db
 # Results (regenerable, optionally track)
 results/models/*.pkl
 results/models/*.joblib
+submission/
+
+# Paper 2 R1: record-level ecospat inputs (World of Crayfish data policy) and R grid objects
+results/revision/ecospat_input/
+results/revision/tables/*.rds
